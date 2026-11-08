@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✧ letters for you ✧</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0c;
+    --paper: #ffe6ea; /* Warm light pink */
+    --ink: #2c2826;
+    --accent: #d4a373;
+  }
+  
+  body, html {
+    width: 100vw;
+    height: 100vh;
+    background: var(--bg);
+    font-family: "Georgia", "Times New Roman", serif;
+    overflow: hidden; /* Hide native scroll */
+    color: var(--ink);
+  }
+
+  /* Subtle radial vignette */
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* BGM Toggle Button */
+  #audioToggle {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 100;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease;
+    opacity: 0; visibility: hidden;
+    pointer-events: none;
+  }
+
+  #audioToggle.visible {
+    opacity: 1; visibility: visible;
+    pointer-events: auto;
+  }
+
+  #audioToggle:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.3);
+    transform: scale(1.05);
+  }
+
+  #audioToggle svg {
+    width: 20px; height: 20px;
+    fill: currentColor;
+  }
+
+  #scroll-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    will-change: transform;
+  }
+
+  /* ===== STAGE 1: THE INITIAL PHOTO ===== */
+  .hero-stage {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: min-height 0.8s cubic-bezier(0.16, 1, 0.3, 1), padding 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 20px;
+    flex-shrink: 0;
+  }
+
+  .hero-photo {
+    position: relative;
+    width: min(320px, 80vw);
+    cursor: pointer;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s, filter 0.6s;
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-10px); }
+  }
+
+  .hero-photo img {
+    width: 100%; 
+    height: auto; 
+    object-fit: contain; 
+    display: block;
+    transition: transform 1s;
+    mix-blend-mode: multiply; 
+  }
+
+  .tap-prompt {
+    position: absolute;
+    bottom: -40px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.6);
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    animation: pulse 2s infinite;
+    z-index: 2;
+    white-space: nowrap;
+  }
+
+  @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+  /* Hero shrinks up to become the first picture in the flow */
+  .hero-stage.opened {
+    min-height: 50vh;
+    padding: 60px 20px 20px;
+  }
+
+  .hero-stage.opened .hero-photo {
+    width: min(250px, 70vw);
+    cursor: default;
+    animation: none;
+  }
+
+  .hero-stage.opened .tap-prompt {
+    display: none;
+  }
+
+  /* ===== STAGE 2: THE SCROLLING LETTERS ===== */
+  .scroll-container {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 1s ease 0.3s, visibility 1s;
+    padding-bottom: 100px;
+    flex-shrink: 0;
+  }
+
+  .scroll-container.on {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .sequence-block {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 60px;
+    flex-shrink: 0;
+  }
+
+  /* Photos in the sequence */
+  .sequence-photo {
+    width: min(280px, 75vw);
+    margin-bottom: 30px;
+  }
+
+  .sequence-photo img {
+    width: 100%; 
+    height: auto; 
+    object-fit: contain;
+    display: block;
+    mix-blend-mode: multiply; 
+  }
+
+  /* Text blocks */
+  .letter-paper {
+    background: var(--paper);
+    color: var(--ink);
+    width: min(600px, 90vw);
+    border-radius: 6px;
+    padding: 50px 40px;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,0,0,0.02);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  /* The individual text elements */
+  .text-line {
+    font-size: 16px;
+    line-height: 1.9;
+    text-align: justify;
+    opacity: 0;
+    transform: scale(2.5) translateY(20px);
+    filter: blur(8px);
+    transition: opacity 0.8s ease-out, transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.8s ease-out;
+    transform-origin: center center;
+    will-change: transform, opacity, filter;
+  }
+
+  .text-line.landed {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+
+  .text-line + .text-line {
+    margin-top: 20px;
+  }
+
+  @media (max-width: 600px) {
+    .letter-paper { padding: 30px 20px; }
+    .text-line { font-size: 15px; }
+    .hero-stage.opened { min-height: 35vh; padding: 40px 20px 20px; }
+    .sequence-photo { width: 85vw; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background Music -->
+<audio id="bgm" src="bgm.mp3" loop></audio>
+
+<!-- Audio Toggle -->
+<button id="audioToggle" aria-label="Toggle Music">
+  <svg id="icon-pause" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+  <svg id="icon-play" viewBox="0 0 24 24" style="margin-left: 4px;"><path d="M8 5v14l11-7z"/></svg>
+</button>
+
+<div id="scroll-wrapper">
+  <!-- HERO PHOTO -->
+  <div class="hero-stage" id="heroStage">
+    <div class="hero-photo" id="heroPhoto">
+      <img src="cover.jpg" alt="Envelope">
+      <div class="tap-prompt" id="tapPrompt">tap to open</div>
+    </div>
+  </div>
+
+  <!-- SCROLLING CONTENT -->
+  <div class="scroll-container" id="scrollContainer">
+    
+    <!-- Intro Letter -->
+    <div class="sequence-block">
+      <div class="letter-paper">
+        <div class="letter-content" data-letter-id="0"></div>
+      </div>
+    </div>
+
+    <!-- Sequence 1 -->
+    <div class="sequence-block">
+      <div class="sequence-photo">
+        <img src="img1.jpg" alt="I'm Sorry Bebu">
+      </div>
+      <div class="letter-paper">
+        <div class="letter-content" data-letter-id="1"></div>
+      </div>
+    </div>
+
+    <!-- Sequence 2 -->
+    <div class="sequence-block">
+      <div class="sequence-photo">
+        <img src="img2.jpg" alt="Hope You Forgive Me">
+      </div>
+      <div class="letter-paper">
+        <div class="letter-content" data-letter-id="2"></div>
+      </div>
+    </div>
+
+    <!-- Sequence 3 -->
+    <div class="sequence-block">
+      <div class="sequence-photo">
+        <img src="img3.jpg" alt="Please Bati Na Tayo">
+      </div>
+      <div class="letter-paper">
+        <div class="letter-content" data-letter-id="3"></div>
+      </div>
+    </div>
+
+    <!-- Sequence 4 -->
+    <div class="sequence-block">
+      <div class="sequence-photo">
+        <img src="img4.jpg" alt="Take Care">
+      </div>
+      <div class="letter-paper">
+        <div class="letter-content" data-letter-id="4"></div>
+      </div>
+    </div>
+
+    <!-- Sequence 5: Blue Flowers (No text) -->
+    <div class="sequence-block" style="margin-bottom: 80px;">
+      <div class="sequence-photo" style="margin-bottom: 0;">
+        <img src="blue_flowers.jpg" alt="Blue Flowers">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const LETTERS = [
+    [
+      "hi gail/bebu, good morning/good afternoon/good evening. Uhm, I just wanted to say na thankful ako na nakilala kita. wala man ako sa tabi mo ngayon, mag -iingat ka palagi ha? always take care of yourself, especially kapag wala ako diyan para alagaan ka.",
+      "I hope you’re doing okay, and I hope life is being gentle with you. If ever may mga araw na mabigat ang lahat, I hope you remember na you don’t have to figure everything out on your own. I’m always rooting for you, kahit hindi mo ako nakikita or nararamdaman sa tabi mo.",
+      "I just want you to know na I’m happy that our paths crossed. you became someone I’m genuinely thankful for kasi ikaw na ‘yan eh, and I wouldn’t want to take that for granted. thank you for the little moments, the conversations, and even the simplest things that somehow make my days better.",
+      "pls don’t forget to rest, eat on time, and take care of your health. ‘wag mong masyadong pahirapan sarili mo, okay? you deserve happiness and all the good things life has to offer.",
+      "I may not always be there physically, pero I hope you know na I care about you. no matter how busy life gets, I genuinely wish nothing but the best for you. stay safe always, bebu. you matter more than you think. IMISSYOUUUU TAKE CARE:3"
+    ],
+    [
+      "I'm sorry for the moments I made you feel less than loved.",
+      "I'm sorry for the times I wasn't there when you needed me. For the words left unsaid, and the things I should have done.",
+      "I'm sorry for the hurt. I know sorry doesn't erase it, but I want you to know it weighs on me.",
+      "I'm sorry bebu."
+    ],
+    [
+      "I hope you forgive me, not because I deserve it, but because holding onto the pain isn't fair to you either.",
+      "I hope you find it in your heart to let me back in. To try again, to do better.",
+      "I'm not asking you to forget. Just to give me a chance to show you I can be better.",
+      "I hope you forgive me."
+    ],
+    [
+      "Please. Bati na tayo.",
+      "I miss talking to you. I miss the little things. I miss you.",
+      "I don't want to keep going in circles. I just want to fix this with you.",
+      "Please, bebu."
+    ],
+    [
+      "Take care of yourself, always. 'Wag mong kalimutang magpahinga at kumain on time.",
+      "Life can get heavy, but I know you're strong enough to carry it. Just don't push yourself too hard, okay?",
+      "Even if I'm not there physically, I'm always rooting for you and wishing you the best.",
+      "Stay safe always, bebu. Take care:3"
+    ]
+  ];
+
+  const heroStage = document.getElementById("heroStage");
+  const heroPhoto = document.getElementById("heroPhoto");
+  const scrollContainer = document.getElementById("scrollContainer");
+  const letterContents = document.querySelectorAll(".letter-content");
+  const wrapper = document.getElementById("scroll-wrapper");
+  
+  const bgm = document.getElementById("bgm");
+  const audioToggle = document.getElementById("audioToggle");
+  const iconPlay = document.getElementById("icon-play");
+  const iconPause = document.getElementById("icon-pause");
+
+  let hasOpened = false;
+  bgm.volume = 0.5;
+
+  function updateAudioUI() {
+    if (bgm.paused) {
+      iconPlay.style.display = "block";
+      iconPause.style.display = "none";
+    } else {
+      iconPlay.style.display = "none";
+      iconPause.style.display = "block";
+    }
+  }
+
+  audioToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (bgm.paused) {
+      bgm.play().catch(()=>{});
+    } else {
+      bgm.pause();
+    }
+  });
+
+  bgm.addEventListener("play", updateAudioUI);
+  bgm.addEventListener("pause", updateAudioUI);
+
+  function initLetters() {
+    letterContents.forEach((container, index) => {
+      container.innerHTML = "";
+      if (LETTERS[index]) {
+        LETTERS[index].forEach((text) => {
+          const p = document.createElement("div");
+          p.className = "text-line";
+          p.textContent = text;
+          container.appendChild(p);
+        });
+      }
+    });
+  }
+
+  function openLetter() {
+    if (hasOpened) return;
+    hasOpened = true;
+
+    bgm.play().catch(err => {
+      console.log("Audio play failed:", err);
+    });
+    
+    audioToggle.classList.add("visible");
+    heroStage.classList.add("opened");
+    
+    setTimeout(() => {
+      scrollContainer.classList.add("on");
+      
+      const firstSectionLines = letterContents[0].querySelectorAll(".text-line");
+      firstSectionLines.forEach((line, i) => {
+        setTimeout(() => {
+          line.classList.add("landed");
+        }, i * 200);
+      });
+
+      setTimeout(updateBounds, 100);
+      setTimeout(updateBounds, 500); 
+    }, 600);
+  }
+
+  // ===== SMOOTH VELOCITY SCROLL SYSTEM =====
+  let targetScroll = 0;
+  let currentScroll = 0;
+  const ease = 0.08;
+  let maxScroll = 0;
+
+  function updateBounds() {
+    const contentHeight = wrapper.scrollHeight;
+    maxScroll = Math.max(0, contentHeight - window.innerHeight);
+  }
+
+  function updateScroll() {
+    currentScroll += (targetScroll - currentScroll) * ease;
+    
+    if (Math.abs(targetScroll - currentScroll) < 0.1) {
+        currentScroll = targetScroll;
+    }
+
+    wrapper.style.transform = `translateY(-${currentScroll}px)`;
+    requestAnimationFrame(updateScroll);
+  }
+
+  window.addEventListener("wheel", (e) => {
+    if (!hasOpened) return; 
+    targetScroll += e.deltaY * 0.8; 
+    targetScroll = Math.max(0, Math.min(targetScroll, maxScroll));
+  }, { passive: true });
+
+  let touchStartY = 0;
+  let touchCurrentY = 0;
+  
+  window.addEventListener("touchstart", (e) => {
+    if (!hasOpened) return;
+    touchStartY = e.touches[0].clientY;
+    touchCurrentY = touchStartY;
+  }, { passive: true });
+
+  window.addEventListener("touchmove", (e) => {
+    if (!hasOpened) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = touchCurrentY - currentY;
+    
+    targetScroll += deltaY * 1.2; 
+    targetScroll = Math.max(0, Math.min(targetScroll, maxScroll));
+    
+    touchCurrentY = currentY;
+  }, { passive: true });
+
+  window.addEventListener("resize", () => {
+    updateBounds();
+    targetScroll = Math.max(0, Math.min(targetScroll, maxScroll));
+  });
+
+  const observerOptions = {
+    root: null,
+    rootMargin: "0px",
+    threshold: 0.15
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const lines = entry.target.querySelectorAll(".text-line");
+        if (lines.length > 0 && !lines[0].classList.contains("landed")) {
+          lines.forEach((line, i) => {
+            setTimeout(() => {
+              line.classList.add("landed");
+            }, i * 200);
+          });
+        }
+      }
+    });
+  }, observerOptions);
+
+  initLetters();
+  updateBounds();
+  requestAnimationFrame(updateScroll);
+
+  const sections = document.querySelectorAll(".sequence-block");
+  for (let i = 0; i < sections.length; i++) {
+    observer.observe(sections[i]);
+  }
+
+  heroPhoto.addEventListener("click", openLetter);
+
+})();
+</script>
+</body>
+</html>
